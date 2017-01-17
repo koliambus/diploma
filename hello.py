@@ -3,34 +3,53 @@ import optparse
 import requests
 from flask import Flask
 
-app = Flask(__name__)
 
-this_container_number = 0
-default_port = 5000
-
-
-@app.route("/")
-def hello():
-    return "Flask Dockerized, my container number = " + this_container_port
-
-
-@app.route("/hello/<int:container>")
-def hello_container(container):
-    return "Hello from container #" + str(container) + " through container #" + str(this_container_port)
+class Parser:
+    @staticmethod
+    def parse_container():
+        parser = optparse.OptionParser()
+        parser.add_option("-C", "--container", dest="container", default=0)
+        options, _ = parser.parse_args()
+        return options.container
 
 
-@app.route("/connect/<string:address>")
-def connect(address):
-    return requests.get("http://" + address + "/hello/" + str(this_container_port)).content
+class Runner:
+    @staticmethod
+    def run(name, application):
+        if name == "__main__":
+            Config.container_number = Parser.parse_container()
+            application.run(host="0.0.0.0", port=Config.default_port)
 
 
-def parse_container():
-    parser = optparse.OptionParser()
-    parser.add_option("-C", "--container", dest="container", default=0)
-    options, _ = parser.parse_args()
-    return options.container
+class Config:
+    container_number = 0
+    default_port = 5000
+    app = None
 
 
-if __name__ == "__main__":
-    this_container_port = parse_container()
-    app.run(host="0.0.0.0", port=default_port)
+class RoutesConfigurator:
+    @staticmethod
+    def configure(application):
+        @application.route("/")
+        def hello():
+            return "Flask Dockerized, my container number = " + str(Config.container_number)
+
+        @application.route("/hello/<int:container>")
+        def hello_container(container):
+            return "Hello from container #" + str(container) + " through container #" + str(Config.container_number)
+
+        @application.route("/connect/<string:address>")
+        def connect(address):
+            connector = HttpConnector()
+            return connector.connect("http://" + address + "/hello/" + str(Config.container_number)).content
+
+
+class HttpConnector:
+    def connect(self, address):
+        return requests.get(address)
+
+Config.app = Flask(__name__)
+
+RoutesConfigurator.configure(Config.app)
+
+Runner.run(__name__, Config.app)
