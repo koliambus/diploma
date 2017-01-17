@@ -21,7 +21,7 @@ def hello_container(container):
 
 @app.route("/connect/<string:address>")
 def connect(address):
-    return requests.get("http://" + address + ":" + str(default_port) + "/hello/" + str(this_container_port)).content
+    return requests.get("http://" + address + "/hello/" + str(this_container_port)).content
 
 
 def parse_container():
